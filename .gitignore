@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# 图表缓存（运行代码时生成，不入库）
+*.png
+*.jpg
+*.pdf
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
