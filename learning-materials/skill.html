@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Skill — 学习资料</title>
+  <style>
+    :root { --fg:#1f2329; --muted:#58606b; --bg:#ffffff; --card:#f6f8fa; --accent:#0969da; --warn:#bf3989; }
+    @media (prefers-color-scheme: dark) {
+      :root { --fg:#e6edf3; --muted:#8b949e; --bg:#0d1117; --card:#161b22; --accent:#58a6ff; --warn:#ff7b72; }
+    }
+    html, body { margin:0; padding:0; background:var(--bg); color:var(--fg); }
+    body { font: 16px/1.7 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+           max-width: 780px; margin: 0 auto; padding: 32px 24px 96px; }
+    h1 { font-size: 32px; line-height: 1.25; margin: 0 0 8px; letter-spacing: -0.02em; }
+    h2 { font-size: 22px; line-height: 1.3; margin: 40px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--card); }
+    h3 { font-size: 17px; margin: 24px 0 8px; color: var(--accent); }
+    p  { margin: 10px 0; }
+    .tag { display:inline-block; padding:2px 10px; border-radius:999px; background:var(--card); color:var(--muted); font-size:12px; margin-right:6px; }
+    blockquote { margin: 12px 0; padding: 10px 16px; border-left: 3px solid var(--accent); background: var(--card); color: var(--muted); border-radius: 0 6px 6px 0; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    code { padding: 1px 6px; background: var(--card); border-radius: 4px; font-size: 0.92em; }
+    pre { padding: 14px 16px; background: var(--card); border-radius: 8px; overflow-x: auto; line-height: 1.55; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+    th, td { padding: 8px 10px; border-bottom: 1px solid var(--card); text-align: left; vertical-align: top; }
+    th { background: var(--card); color: var(--muted); font-weight: 600; }
+    ul, ol { padding-left: 22px; }
+    li { margin: 4px 0; }
+    .source a { word-break: break-all; }
+    .meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .callout { border-left: 3px solid var(--warn); background: var(--card); padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 12px 0; }
+    hr { border: none; border-top: 1px dashed var(--card); margin: 32px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="meta"><span class="tag">学习资料</span><span class="meta">由 concept-explainer Skill 生成 · 生成时间：2026-09-04 · 个人理解 + 核查</span></p>
+    <h1>Skill（技能 / 技能包）</h1>
+    <p class="meta">一句话定位：Skill 是把"完成某类任务的领域知识、步骤、脚本、模板"打包成结构化文件夹，让 Agent 在合适场景下像调用一份"操作手册"一样按需加载。</p>
+  </header>
+
+  <h2>1. 学习目标 &amp; 关键问题</h2>
+  <h3>读完能做：</h3>
+  <ol>
+    <li>用一句话讲清 Skill 是什么、与裸 prompt 的本质差别。</li>
+    <li>说出一个 Skill 包的三个标准组成（SKILL.md / references / scripts 或 assets）。</li>
+    <li>列出至少 3 种"应当抽成 Skill 而不是裸 prompt"的场景。</li>
+    <li>区分项目级 Skill、用户级 Skill 与系统级 Skill 的存放位置与适用场景。</li>
+    <li>在你的工作目录里<strong>创建、调用、调试</strong>一个最小的 Skill。</li>
+  </ol>
+  <h3>会回答：</h3>
+  <ul>
+    <li>Skill 和 prompt 到底有什么不一样？是不是只是"换个名字的 prompt"？</li>
+    <li>为什么需要 SKILL.md 这种结构化的 markdown，而不是直接在系统提示里写长 prompt？</li>
+    <li>"按需加载"在工程上是怎么实现的？Agent 怎么决定该用哪个 Skill？</li>
+    <li>Skill 和 Tool / Subagent / Plugin 这些相邻概念怎么区分？</li>
+  </ul>
+
+  <h2>2. 个人解释</h2>
+  <p>我自己理解的 Skill 用一句话讲：</p>
+  <blockquote>Skill = <strong>一份标准化的"岗位操作包"</strong>。它不是单个 prompt，而是 SKILL.md（怎么干）+ references（更多细节）+ scripts / assets（重复劳动用工具）三件套。</blockquote>
+  <p>用一个更接地气的比喻：</p>
+  <ul>
+    <li><strong>LLM</strong> 像是一个<strong>多面手新人</strong>，它什么都能聊两句，但每个岗位都得现学。</li>
+    <li><strong>Skill</strong> 像公司给新人准备的<strong>"岗位入职包"</strong>：标准操作流程 + 表单模板 + 系统入口 + 历史踩坑记录。</li>
+    <li><strong>没有 Skill</strong> 时，新人每次都得重新问"咱们公司报表怎么出"；<strong>有 Skill</strong> 时，答案是"打开 <code>report-generator</code> 这个 Skill，照着做"。</li>
+  </ul>
+  <p>很多新手以为"Skill 不就是一段 system prompt？" 不是的。差别在于三个地方：</p>
+  <ol>
+    <li><strong>结构化</strong>：Skill 有约定俗成的目录结构与 YAML frontmatter，机器能解析、人也能读。</li>
+    <li><strong>可复用</strong>：Skill 是独立的文件夹，可以版本管理（Git）、被分享（pull request）、跨项目共享。</li>
+    <li><strong>可附加资源</strong>：Skill 能带可执行脚本（python / bash）和静态资产（模板、图标、样例输出），覆盖那些靠 token 生成不靠谱的确定性任务。</li>
+  </ol>
+
+  <h2>3. 核心机制或组成</h2>
+  <p>一个规范的 Skill 通常由以下部件拼成：</p>
+  <table>
+    <thead><tr><th>部件</th><th>作用</th><th>何时用</th></tr></thead>
+    <tbody>
+      <tr><td><code>SKILL.md</code></td><td>Skill 的"自述"：YAML frontmatter + 工作流说明</td><td>必备</td></tr>
+      <tr><td><code>references/</code></td><td>按需加载到上下文的详细文档</td><td>文档较长、希望按子话题拆开时</td></tr>
+      <tr><td><code>scripts/</code></td><td>对确定性任务直接写脚本</td><td>逻辑固定、token 生成不可靠时（旋转 PDF、跑测试）</td></tr>
+      <tr><td><code>assets/</code></td><td>模板、字体、图标、样例文件</td><td>需要被复制进最终交付物中时</td></tr>
+    </tbody>
+  </table>
+
+  <p>更关键的机制是"加载策略"的三级渐进：<sup><a href="#ref-2">[2]</a></sup></p>
+  <pre class="mermaid">
+flowchart LR
+  M["元数据<br/>name + description<br/>~100 字"] --> R[决策触发<br/>是否相关]
+  R -- 相关 --> B[加载 SKILL.md 正文<br/>不超过 5000 字]
+  B -- 需要细节 --> S[加载 references/<br/>按需查阅]
+  B -- 需要跑代码 --> C[执行 scripts/<br/>无需载入上下文]
+  </pre>
+
+  <p>这个三级加载的设计是 Skill 能"不撑爆上下文"的关键：<strong>不是每个 Skill 的所有内容都进上下文</strong>，而是在 Agent 真的需要时才引用。</p>
+
+  <h3>SKILL.md 的最小骨架</h3>
+  <pre><code>---
+name: &lt;skill-name&gt;
+description: |
+  This skill should be used when ...
+  不能只写一行；至少说明触发场景和产出
+agent_created: true   # 若是 AI 自己创建的，加上以便后续修改
+---
+
+# &lt;Skill 名称&gt;
+
+## 适用场景
+## 输入信息
+## 工作流（分步骤）
+## 输出结构
+## 自检要求
+## （可选）范例
+</code></pre>
+
+  <h2>4. 一个具体应用场景</h2>
+  <p><strong>任务：</strong>每周一批 10 份学生报名表（Excel），需要按统一模板汇总输出成一份 Word 报名册。</p>
+
+  <p><strong>用裸 prompt 的做法：</strong></p>
+  <ol>
+    <li>写一段长 prompt："你是助理，请读 Excel……"</li>
+    <li>每次都得复制粘贴这份 prompt。</li>
+    <li>用户改要求（比如新增一列）—— prompt 要全部重写。</li>
+    <li>同事也想用 — 不知道这份 prompt 在哪。</li>
+  </ol>
+
+  <p><strong>用 Skill 的做法：</strong></p>
+  <ol>
+    <li>在 <code>.workbuddy/skills/student-roster/</code> 下创建一个 Skill，包含：
+      <ul>
+        <li><code>SKILL.md</code>：说明输入是 Excel 列表、输出是固定模板 Word、中间要做的核对步骤。</li>
+        <li><code>references/roster-template.md</code>：Word 排版要求（字号、表头、命名规范）。</li>
+        <li><code>scripts/excel_to_word.py</code>：一个确定性的转换脚本（不依赖 LLM）。</li>
+        <li><code>assets/template.docx</code>：空白模板。</li>
+      </ul>
+    </li>
+    <li>以后每周只需对 WorkBuddy 说："用 <code>student-roster</code> 处理这周的 Excel。"</li>
+    <li>改要求？改 SKILL.md 一处即可。共享给同事？把这个文件夹发过去。</li>
+  </ol>
+
+  <p><strong>为什么这样更稳：</strong>确定性部分（文件格式转换、姓名校验）交给 <code>scripts/</code>，只有"理解 + 决策"才走 LLM。这样既能复用，又<strong>把 token 成本和幻觉风险压到最小</strong>。<sup><a href="#ref-1">[1]</a></sup></p>
+
+  <h2>5. 容易混淆的问题与使用边界</h2>
+  <table>
+    <thead><tr><th>易混点</th><th>本概念</th><th>相邻概念</th><th>判定方法</th></tr></thead>
+    <tbody>
+      <tr><td>Skill vs Prompt</td><td>结构化、可版本化、可附资源</td><td>纯文本、写一次用一次</td><td>看有没有目录 + 元数据</td></tr>
+      <tr><td>Skill vs Tool</td><td>"知道怎么干"<strong>指导</strong>LLM</td><td>"直接能干"<strong>调用</strong>外部动作</td><td>Skill 不直接产生副作用；Tool 才会</td></tr>
+      <tr><td>Skill vs Subagent</td><td>主 Agent 加载的辅助内容</td><td>独立的子决策体</td><td>看是不是新开一个决策循环</td></tr>
+      <tr><td>Skill vs Plugin</td><td>AI 用的、可被 AI 加载</td><td>外部应用扩展、给人看的 UI</td><td>看消费者是 LLM 还是人</td></tr>
+      <tr><td>项目级 vs 用户级 Skill</td><td>随仓库走，团队可共享</td><td>跨项目跟随个人</td><td>看路径：<code>.workbuddy/skills/</code> vs <code>~/.workbuddy/skills/</code><sup><a href="#ref-2">[2]</a></sup></td></tr>
+    </tbody>
+  </table>
+
+  <h3>使用边界</h3>
+  <div class="callout">
+    <p><strong>应当抽成 Skill 的场景</strong>：</p>
+    <ul>
+      <li>同一类任务要被多次复用（如本作业的"概念学习资料生成"）。</li>
+      <li>任务需要对 LLM 之外的工具/脚本 配合。</li>
+      <li>任务需要按团队/项目沉淀领域知识（如品牌规范、合规要求）。</li>
+      <li>任务涉及不可逆操作，需要约定好的检查清单。</li>
+    </ul>
+    <p><strong>不必抽成 Skill 的场景</strong>：</p>
+    <ul>
+      <li>只用一次的一次性提示。</li>
+      <li>用户当前提问里已经把全部要求说清了的临时任务。</li>
+      <li>暂未稳定（频繁改要求）的工作流——先稳定再抽 Skill。</li>
+    </ul>
+    <p><strong>Skill 的反模式</strong>（个人判断）：</p>
+    <ul>
+      <li>把所有信息全塞在 SKILL.md 里（应当拆 references/）。</li>
+      <li>把"应当确定性执行"的逻辑写在 prompt 里（应当 scripts/）。</li>
+      <li>description 写得太笼统，导致 WorkBuddy 不能自动识别该加载。</li>
+      <li>多 Skill 重名 / 描述重叠，导致选择错乱。</li>
+    </ul>
+  </div>
+
+  <h2>6. 自测问题</h2>
+  <ol>
+    <li>
+      <strong>Q：</strong>SKILL.md 顶部必须包含哪些字段？
+      <br/><strong>要点：</strong><code>name</code>（必需）与 <code>description</code>（必需），推荐 <code>agent_created: true</code>（用于 AI 自己创建的 Skill 后期管理）。description 必须写明"什么时候该用"，让 WorkBuddy 能自动触发<sup><a href="#ref-1">[1]</a><a href="#ref-2">[2]</a></sup>。
+    </li>
+    <li>
+      <strong>Q：</strong>Skill 和 Tool 的根本区别是什么？
+      <br/><strong>要点：</strong>Tool 让 LLM 能"动手"（调用 API、改文件、发请求）；Skill 让 LLM 能"照着做"（按约定步骤、查内部资料）。Skill 不直接产生副作用，Tool 才会。
+    </li>
+    <li>
+      <strong>Q：</strong>什么样的任务应该用 <code>scripts/</code> 而不是写在 prompt 里？
+      <br/><strong>要点：</strong>逻辑固定、能用代码表达、对一致性要求高的部分（如格式转换、数值计算、文件 IO）。LLM 生成易出错的环节用脚本确定性完成；只有"理解上下文"的部分留给 LLM<sup><a href="#ref-1">[1]</a></sup>。
+    </li>
+    <li>
+      <strong>Q：</strong>项目级 Skill 放在哪个目录？用户级 Skill 放在哪？
+      <br/><strong>要点：</strong>项目级：仓库内 <code>.workbuddy/skills/&lt;name&gt;/SKILL.md</code>，跟仓库走、团队可见；用户级：<code>~/.workbuddy/skills/&lt;name&gt;/SKILL.md</code>，跨项目跟个人。个人 Skill 需要先在 WorkBuddy 中加载/启用<sup><a href="#ref-2">[2]</a></sup>。
+    </li>
+  </ol>
+
+  <h2>7. 参考来源</h2>
+  <ol class="source">
+    <li id="ref-1"><a href="https://claude.com/blog/skills">Claude Blog: Introducing Agent Skills — 2025-10-16</a>。Anthropic 在 Claude 平台正式公布 Agent Skills，强调 Skills 是含指令/脚本/资源的文件夹，Claude 会"按需加载"；并给出 4 个核心特性（Composable / Portable / Efficient / Powerful）。</li>
+    <li id="ref-2"><a href="https://www.workbuddy.cn/docs/workbuddy/Overview">WorkBuddy 简介</a>。说明 WorkBuddy 是腾讯出品的全场景 AI 办公工作台，支持"自主规划执行 + 多步骤复杂任务"，对个人 Skill 的存放与加载策略与 Anthropic Claude 平台一致（项目级 <code>.workbuddy/skills/</code>、用户级 <code>~/.workbuddy/skills/</code>）。</li>
+    <li id="ref-3"><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-agents">Anthropic Engineering: Effective context engineering for AI agents</a>。将 Skill 类比为"上下文工程中 examples / message history 之外的结构化模块"，并指出"scripts instead of tokens"是高效的关键。</li>
+  </ol>
+
+  <h2>8. 与其他概念的关联</h2>
+  <ul>
+    <li><strong>与"Agent"</strong>：Agent 是执行体（决策 + 工具 + 循环）；Skill 沉淀 Agent 的"经验手册"。没 Skill 的 Agent 像新员工，啥都要问；有 Skill 的 Agent 像熟练员工，能按手册批量作业。</li>
+    <li><strong>与"上下文"</strong>：Skill 的内容会进入上下文，写得冗长 = 占用窗口；写得精炼、按需加载 = 把窗口留给真正的工作。Skill 设计本身就是一种"上下文工程"实践<sup><a href="#ref-3">[3]</a></sup>。</li>
+  </ul>
+
+  <hr />
+  <p class="meta">本文档遵循 concept-explainer Skill 的 7 小节模板生成；本文所引用的概念解释均依据 Anthropic Skills 公告<sup><a href="#ref-1">[1]</a></sup> 与 WorkBuddy 文档<sup><a href="#ref-2">[2]</a></sup>。SKILL.md 详细字段格式（如是否还有其他可选字段）请以本机 WorkBuddy 实际加载的 skill-creator Skill 为准（已在其 SKILL.md 中给出了 4 步创建流程）。</p>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>if (window.mermaid) mermaid.initialize({ startOnLoad: true, securityLevel: 'loose' });</script>
+</body>
+</html>

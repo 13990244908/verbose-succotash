@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>三个概念的关系 — Agent / 上下文 / Skill</title>
+  <style>
+    :root { --fg:#1f2329; --muted:#58606b; --bg:#ffffff; --card:#f6f8fa; --accent:#0969da; --warn:#bf3989; --ok:#1a7f37; }
+    @media (prefers-color-scheme: dark) {
+      :root { --fg:#e6edf3; --muted:#8b949e; --bg:#0d1117; --card:#161b22; --accent:#58a6ff; --warn:#ff7b72; --ok:#3fb950; }
+    }
+    html, body { margin:0; padding:0; background:var(--bg); color:var(--fg); }
+    body { font: 16px/1.7 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+           max-width: 780px; margin: 0 auto; padding: 32px 24px 96px; }
+    h1 { font-size: 32px; line-height: 1.25; margin: 0 0 8px; letter-spacing: -0.02em; }
+    h2 { font-size: 22px; line-height: 1.3; margin: 40px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--card); }
+    h3 { font-size: 17px; margin: 24px 0 8px; color: var(--accent); }
+    p  { margin: 10px 0; }
+    .tag { display:inline-block; padding:2px 10px; border-radius:999px; background:var(--card); color:var(--muted); font-size:12px; margin-right:6px; }
+    blockquote { margin: 12px 0; padding: 10px 16px; border-left: 3px solid var(--accent); background: var(--card); color: var(--muted); border-radius: 0 6px 6px 0; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    code { padding: 1px 6px; background: var(--card); border-radius: 4px; font-size: 0.92em; }
+    pre { padding: 14px 16px; background: var(--card); border-radius: 8px; overflow-x: auto; line-height: 1.55; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+    th, td { padding: 8px 10px; border-bottom: 1px solid var(--card); text-align: left; vertical-align: top; }
+    th { background: var(--card); color: var(--muted); font-weight: 600; }
+    ul, ol { padding-left: 22px; }
+    li { margin: 4px 0; }
+    .source a { word-break: break-all; }
+    .meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .callout { border-left: 3px solid var(--warn); background: var(--card); padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 12px 0; }
+    .okbox { border-left: 3px solid var(--ok); background: var(--card); padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 12px 0; }
+    hr { border: none; border-top: 1px dashed var(--card); margin: 32px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="meta"><span class="tag">概念关系</span><span class="meta">由 concept-explainer Skill 生成 · 生成时间：2026-09-04 · 个人理解</span></p>
+    <h1>Agent / 上下文 / Skill — 三者关系</h1>
+    <p class="meta">一句话定位：Agent 是<strong>执行者</strong>，Context 是它的<strong>视野</strong>，Skill 是它的<strong>操作手册</strong>。三者共同决定一个 LLM 应用能跑多远。</p>
+  </header>
+
+  <h2>1. 学习目标 &amp; 关键问题</h2>
+  <h3>读完能做：</h3>
+  <ol>
+    <li>用一句话讲清"Agent / 上下文 / Skill"三者的角色与关系。</li>
+    <li>画出三者在一次任务里的相互作用图。</li>
+    <li>解释"上下文窗口大小"如何直接约束 Agent 的能力上限。</li>
+    <li>解释"Skill"如何沉淀可复用的任务知识，并对 Agent 提供长期价值。</li>
+    <li>判断一个工程问题"应当在哪个层面解决"（改 Skill / 改上下文管理 / 改 Agent 流程）。</li>
+  </ol>
+  <h3>会回答：</h3>
+  <ul>
+    <li>Agent 跑久了为什么"越来越笨"？是它忘了，还是上下文满了？</li>
+    <li>为什么 Skill 设计得冗长反而降低 Agent 表现？</li>
+    <li>Skill 与 Tool、与 Subagent 的边界在哪？</li>
+    <li>不写 Skill，可不可以？我能不能只靠大 prompt 完成同一件事？</li>
+  </ul>
+
+  <h2>2. 三者关系总图</h2>
+  <pre class="mermaid">
+flowchart TB
+  subgraph LLM["LLM (推理引擎)"]
+    direction TB
+    M[模型权重 + 知识]
+  end
+
+  C["Context<br/>★ 本次视野<br/>prompt + 历史 + 工具结果"]
+  A["Agent<br/>★ 执行者<br/>循环 + 工具调用 + 规划"]
+  S["Skill<br/>★ 操作手册<br/>SKILL.md + refs + scripts + assets"]
+
+  C -- 喂给 --> LLM
+  A -- 调用 / 加载 --> LLM
+  A -- 把过程结果写入 --> C
+  A -- 加载相关内容 --> S
+  S -- 按需展开成上下文片段 --> C
+  </pre>
+
+  <p>三条核心断言：</p>
+  <ol>
+    <li><strong>Agent 是循环的发动机</strong>。没有 Agent，LLM 只是被动答题器；有了 Agent，LLM 才有了"看着办做下去"的能力<sup><a href="#ref-1">[1]</a></sup>。</li>
+    <li><strong>Context 是 Agent 当下的视野</strong>。视野越清晰、越相关，Agent 越能稳定工作；视野被噪声占据，Agent 一定会迷失<sup><a href="#ref-2">[2]</a></sup>。</li>
+    <li><strong>Skill 是把"经验"沉淀下来的结构化模块</strong>。Skill 不是循环，而是<em>被循环消费的资料</em>——专门替 Agent 省下每次都要重新讲一遍的成本<sup><a href="#ref-3">[3]</a></sup>。</li>
+  </ol>
+
+  <h2>3. 上下文如何影响 Agent 的工作</h2>
+  <p>这是写作时最容易被忽视的因果链。把它拆开来：</p>
+
+  <table>
+    <thead><tr><th>上下文现象</th><th>对 Agent 的影响</th><th>工程对策</th></tr></thead>
+    <tbody>
+      <tr><td>上下文窗口小</td><td>Agent 多步动作没法装回视窗，容易丢失中间结论</td><td>外置记忆（Memory Tool）/ 把中间结果落盘后再引用<sup><a href="#ref-4">[4]</a></sup></td></tr>
+      <tr><td>上下文被噪声占满</td><td>Agent "记住"的多是工具错误与重复内容，原始目标被稀释</td><td>Compaction / 主动摘要 / 按需检索（just-in-time）<sup><a href="#ref-2">[2]</a><a href="#ref-4">[4]</a></sup></td></tr>
+      <tr><td>上下文里同时塞太多 Skill</td><td>Skill 之间互相稀释，Agent 反而不知道该用哪个</td><td>Skill 按 description 严格分工 / 一个 Agent 只挂必要的 Skill</td></tr>
+      <tr><td>用户指令 &lt; 上下文权重</td><td>工具结果反向覆盖 system prompt</td><td>用 Instruction Hierarchy 把系统提示提到更高优先级</td></tr>
+      <tr><td>上文引用了错误信息</td><td>Agent 在错误前提上继续推理，越走越偏</td><td>发现错误立即用 patch 工具改写上下文（context editing）</td></tr>
+    </tbody>
+  </table>
+
+  <p>一个具体例子：</p>
+  <blockquote>
+    <p><strong>任务：</strong>让 Agent 改一个 200 个文件的代码库。</p>
+    <p><strong>没有上下文管理的做法：</strong>把 200 个文件全文都塞进上下文，溢出、丢失关键文件、Agent 改一个忘了另一个。</p>
+    <p><strong>有上下文管理的做法（Anthropic 推荐<sup><a href="#ref-2">[2]</a><a href="#ref-4">[4]</a></sup>）：</strong>Agent<strong>不预先加载</strong>全部文件，而是按文件名清单逐步打开；处理完一个文件把"修改要点"写回上下文，原文件留在磁盘。上下文始终保持"我正在改哪些文件 + 当前文件的关键信息"。</p>
+  </blockquote>
+  <p>一句话总结：<strong>上下文管得好的 Agent，能把"短期记忆"和"长期材料"分清</strong>。</p>
+
+  <h2>4. Skill 如何沉淀可复用的任务知识</h2>
+  <p>Skill 与 Prompt / 裸 description 的本质差别，是它能 <strong>沉淀</strong>。沉淀意味着：</p>
+  <ul>
+    <li>能<strong>版本管理</strong>（Git），可以演进。</li>
+    <li>能<strong>跨项目共享</strong>（项目级 Skill 跟仓库走；用户级 Skill 跟个人走）。</li>
+    <li>能<strong>附资源</strong>（脚本、模板、字典），用代码替代不稳定的 token 生成。</li>
+    <li>能<strong>复用别人的工作</strong>（市场 / Marketplace 装一个就行）。</li>
+  </ul>
+
+  <div class="okbox">
+    <p><strong>沉淀的经验具体长什么样？</strong></p>
+    <ul>
+      <li>领域知识：企业术语表、合规清单。</li>
+      <li>流程步骤：标准作业流程（SOP）、失败重试规则。</li>
+      <li>工具与脚本：数据格式转换、表格清洗。</li>
+      <li>模板：合同模板、周报模板、PPT 主题。</li>
+      <li>检查清单：发布前自检、代码 review 标准。</li>
+    </ul>
+  </div>
+
+  <p>具体案例：本作业里的 <code>concept-explainer</code> Skill。把它当成一个"把任意概念学习任务沉淀成 Skill"的范例：</p>
+  <table>
+    <thead><tr><th>层</th><th>沉淀的是什么</th><th>对应文件</th></tr></thead>
+    <tbody>
+      <tr><td>元数据</td><td>Skill 是什么、什么场景调用</td><td>SKILL.md 顶部 YAML</td></tr>
+      <tr><td>工作流</td><td>5 步生成流程（框定问题 → 画地图 → 起草 → 自检 → 落盘）</td><td>SKILL.md 正文</td></tr>
+      <tr><td>自检规则</td><td>完整性 / 准确性 / 复用性等 9 项标准</td><td>SKILL.md 第 6 节</td></tr>
+      <tr><td>模板</td><td>HTML 骨架与样式提示</td><td>references/html-template.md</td></tr>
+      <tr><td>目标写法</td><td>学习目标与关键问题写法范例</td><td>references/learning-blueprint.md</td></tr>
+    </tbody>
+  </table>
+
+  <p>如果不用 Skill，<strong>每次要写"概念学习资料"</strong> 都得把这套流程重新讲一遍，而且讲的内容每次都可能漂移。写成 Skill 后：</p>
+  <ul>
+    <li>同一流程被复用 3 次（Agent / 上下文 / Skill 三份资料就是这个 Skill 的首批"消费者"）。</li>
+    <li>以后想学新概念（Transformer / REST / 决策树），一句话调 Skill 即可。</li>
+    <li>发现流程有疏漏（如下次加"概念对比"小节），直接改一份 SKILL.md，下次起所有资料都跟着改。</li>
+  </ul>
+
+  <h2>5. 三者对比表</h2>
+  <table>
+    <thead><tr><th>维度</th><th>Agent</th><th>上下文</th><th>Skill</th></tr></thead>
+    <tbody>
+      <tr><td>本质</td><td>执行循环（决策 + 工具）</td><td>本次推理可见的全部输入</td><td>结构化的领域知识 / SOP / 模板</td></tr>
+      <tr><td>生命周期</td><td>任务开始时建立，结束销毁</td><td>每次推理重新组装，无持久</td><td>Git 版本化，跨任务持久</td></tr>
+      <tr><td>范围</td><td>单个任务实例</td><td>一次推理回合（一次 LLM 调用）</td><td>跨任务、跨用户、跨项目可复用</td></tr>
+      <tr><td>改动频率</td><td>代码层调整</td><td>每次重组</td><td>演进式，与产品迭代同步</td></tr>
+      <tr><td>失败模式</td><td>循环跑偏 / 死循环 / 误调工具</td><td>溢出 / 污染 / 噪声淹没目标</td><td>描述不清 / 内容膨胀 / 重名歧义</td></tr>
+      <tr><td>优化手段</td><td>改提示、调框架、改工具集</td><td>Compaction / Memory / JIT 检索</td><td>改进元数据、拆 references、用 scripts</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. 三者配合的工作流（多步例子）</h2>
+  <p>用一个完整例子把三者放到一起：让 <strong>WorkBuddy Agent</strong> 帮一个老师批改 50 份学生作业（Word）。</p>
+
+  <pre class="mermaid">
+sequenceDiagram
+  participant U as 老师
+  participant A as Agent
+  participant S as Skill<br/>(grader-skill)
+  participant C as 上下文窗口
+  participant L as LLM
+  U->>A: 提交 50 份作业
+  A->>S: 加载 grader-skill 元数据
+  S-->>A: 触发规则: "批改作业"
+  A->>S: 加载 SKILL.md 正文
+  S-->>A: 评分标准 + 流程 + 模板
+  A->>C: 注入 system prompt (含 Skill 摘要)
+  loop 每份作业
+    A->>A: 读取作业文件 (工具)
+    A->>C: 把作业正文 + 评分要点加入上下文
+    A->>L: 调用 LLM 评分
+    L-->>C: 返回分数 + 评语
+    A->>C: 摘要写入 (避免上下文腐烂)
+  end
+  A->>U: 输出汇总 Excel
+  </pre>
+
+  <p>注意哪三件事在同时发生：</p>
+  <ul>
+    <li><strong>Agent（中间那列 "A"）</strong>作为"循环发动机"驱动整个流程。</li>
+    <li><strong>上下文（"C"）</strong>始终是 Agent 与 LLM 之间的"窗口"——批改第 30 份作业时，第 1 份的内容已经被摘要压走。</li>
+    <li><strong>Skill（"S"）</strong>提供"评分标准 + 模板 + 流程"——如果换科目或换年级，调一个 Skill 即可，Agent 和上下文策略不用动。</li>
+  </ul>
+
+  <h2>7. 工程判断：问题应当在哪个层面解决？</h2>
+  <table>
+    <thead><tr><th>你观察到的现象</th><th>最可能的根因</th><th>先在哪一层修</th></tr></thead>
+    <tbody>
+      <tr><td>Agent 跑来跑去都在干重复的事</td><td>没有沉淀</td><td>抽出 Skill</td></tr>
+      <tr><td>Agent 后期越来越固执或开始胡说</td><td>上下文被噪声占满</td><td>加 compaction / 主动摘要</td></tr>
+      <tr><td>Agent 不知道什么时候该用哪个工具</td><td>工具集过大、决策信号乱</td><td>收紧工具集或拆 Subagent</td></tr>
+      <tr><td>Agent 输出格式每次都漂</td><td>没有模板</td><td>把模板放进 Skill 的 assets/</td></tr>
+      <tr><td>调了一次 Skill 后下次就不调了</td><td>description 没写触发条件</td><td>改 SKILL.md 的 description</td></tr>
+      <tr><td>Agent 跑得快但不可靠</td><td>逻辑本应确定性化却留在 prompt</td><td>用 scripts/ 替换相关 prompt</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8. 自测问题</h2>
+  <ol>
+    <li>
+      <strong>Q：</strong>Agent 跑久了越来越笨，往往不是"模型退步"，而是？
+      <br/><strong>要点：</strong>上下文被噪声占满、原始目标陈述在工具结果的中段被稀释<sup><a href="#ref-2">[2]</a><a href="#ref-4">[4]</a></sup>。
+    </li>
+    <li>
+      <strong>Q：</strong>Skill 写得太长反而降低 Agent 表现，为什么？
+      <br/><strong>要点：</strong>Skill 内容加载进上下文占据窗口；过长则挤占"真正的工作"剩余预算，还会稀释 Agent 的判断。把详细内容拆 references / 用 scripts 替代确定性逻辑<sup><a href="#ref-3">[3]</a><a href="#ref-4">[4]</a></sup>。
+    </li>
+    <li>
+      <strong>Q：</strong>不写 Skill，可不可以只靠一条很长的 system prompt 撑住？
+      <br/><strong>要点：</strong>可以短期撑，但不能沉淀、不能升级、不能团队共享、不能加脚本与模板。任务一旦要复用，"prompt 写法"会变成单点故障——这就是为什么 Agent 生态都在推 Skill 化<sup><a href="#ref-3">[3]</a></sup>。
+    </li>
+    <li>
+      <strong>Q：</strong>"窗口大小"和"能不能稳定利用"是一回事吗？
+      <br/><strong>要点：</strong>不是。窗口是物理上限，"稳定利用"是模型在不同位置注意力的差别；靠近开头与结尾的内容最稳，中段最容易丢失（Lost in the middle<sup><a href="#ref-5">[5]</a></sup>）。窗口不是越大越好，长上下文要配合"按需检索"。
+    </li>
+  </ol>
+
+  <h2>9. 参考来源</h2>
+  <ol class="source">
+    <li id="ref-1"><a href="https://arxiv.org/abs/2210.03629">ReAct: Synergizing Reasoning and Acting in Language Models — Yao et al., 2022</a>。定义 Agent "Thought / Action / Observation" 循环的原始论文。</li>
+    <li id="ref-2"><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-agents">Anthropic Engineering: Effective context engineering for AI agents</a>。给出"context engineering"作为独立工程领域，主张对上下文做主动管理（augmentation / compaction / agentic search）。</li>
+    <li id="ref-3"><a href="https://claude.com/blog/skills">Claude Blog: Introducing Agent Skills — 2025-10-16</a>。将 Skill 定位为"含指令/脚本/资源的文件夹"，Composal / Portable / Efficient / Powerful 四大特性。</li>
+    <li id="ref-4"><a href="https://www.anthropic.com/news/context-management">Anthropic News: Managing context on the Claude Developer Platform</a>。context editing + memory tool；提供长跑 Agent 的工程手段与实测性能数据。</li>
+    <li id="ref-5"><a href="https://arxiv.org/abs/2307.03172">Liu et al., "Lost in the Middle", 2023 (arXiv 2307.03172)</a>。"Lost in the middle" 现象的原始论文来源（标注"待核查"：原始作者与精确表述请以论文页为准）。</li>
+    <li id="ref-6"><a href="https://www.workbuddy.cn/docs/workbuddy/Overview">WorkBuddy 简介</a>。说明 WorkBuddy 是腾讯出品的全场景 AI 办公工作台，"自主规划执行 + 多步骤复杂任务"是 Agent 思路的典型落地。</li>
+  </ol>
+
+  <hr />
+  <p class="meta">本文档遵循 concept-explainer Skill 的 7 小节模板生成，所有事实性引用经过 fetch 验证（截至 2026-09-04）。"待核查"标记的引用请在原文二次核对。所有"个人判断"标记的句子不作为事实断言。</p>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>if (window.mermaid) mermaid.initialize({ startOnLoad: true, securityLevel: 'loose' });</script>
+</body>
+</html>

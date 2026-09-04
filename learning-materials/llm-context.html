@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>大模型的上下文 — 学习资料</title>
+  <style>
+    :root { --fg:#1f2329; --muted:#58606b; --bg:#ffffff; --card:#f6f8fa; --accent:#0969da; --warn:#bf3989; }
+    @media (prefers-color-scheme: dark) {
+      :root { --fg:#e6edf3; --muted:#8b949e; --bg:#0d1117; --card:#161b22; --accent:#58a6ff; --warn:#ff7b72; }
+    }
+    html, body { margin:0; padding:0; background:var(--bg); color:var(--fg); }
+    body { font: 16px/1.7 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+           max-width: 780px; margin: 0 auto; padding: 32px 24px 96px; }
+    h1 { font-size: 32px; line-height: 1.25; margin: 0 0 8px; letter-spacing: -0.02em; }
+    h2 { font-size: 22px; line-height: 1.3; margin: 40px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--card); }
+    h3 { font-size: 17px; margin: 24px 0 8px; color: var(--accent); }
+    p  { margin: 10px 0; }
+    .tag { display:inline-block; padding:2px 10px; border-radius:999px; background:var(--card); color:var(--muted); font-size:12px; margin-right:6px; }
+    blockquote { margin: 12px 0; padding: 10px 16px; border-left: 3px solid var(--accent); background: var(--card); color: var(--muted); border-radius: 0 6px 6px 0; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    code { padding: 1px 6px; background: var(--card); border-radius: 4px; font-size: 0.92em; }
+    pre { padding: 14px 16px; background: var(--card); border-radius: 8px; overflow-x: auto; line-height: 1.55; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+    th, td { padding: 8px 10px; border-bottom: 1px solid var(--card); text-align: left; vertical-align: top; }
+    th { background: var(--card); color: var(--muted); font-weight: 600; }
+    ul, ol { padding-left: 22px; }
+    li { margin: 4px 0; }
+    .source a { word-break: break-all; }
+    .meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .callout { border-left: 3px solid var(--warn); background: var(--card); padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 12px 0; }
+    hr { border: none; border-top: 1px dashed var(--card); margin: 32px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="meta"><span class="tag">学习资料</span><span class="meta">由 concept-explainer Skill 生成 · 生成时间：2026-09-04 · 个人理解 + 核查</span></p>
+    <h1>大模型的上下文 (LLM Context)</h1>
+    <p class="meta">一句话定位：上下文是模型在一次推理中"看得见"的全部输入——prompt、对话历史、工具结果、检索片段，决定它这一次回答能走多远。</p>
+  </header>
+
+  <h2>1. 学习目标 &amp; 关键问题</h2>
+  <h3>读完能做：</h3>
+  <ol>
+    <li>用一句话讲清"上下文"对 LLM 意味着什么。</li>
+    <li>区分"上下文窗口"与"有效上下文"两个概念。</li>
+    <li>解释为什么跑长任务的 Agent 必须做"上下文管理"。</li>
+    <li>列出至少三种上下文管理的工程手段。</li>
+    <li>说出"上下文污染"在长任务中的常见表现。</li>
+  </ol>
+  <h3>会回答：</h3>
+  <ul>
+    <li>上下文窗口到底是不是 LLM 的"记忆"？为什么不是？</li>
+    <li>"100k 上下文窗口"等于"能稳定利用 100k 的事实"吗？</li>
+    <li>RAG（检索增强生成）和"长上下文"是什么关系？是不是互斥？</li>
+    <li>Agent 跑久了为什么会"迷失"甚至开始自己瞎写？</li>
+  </ul>
+
+  <h2>2. 个人解释</h2>
+  <p>用一个我自己的比喻：</p>
+  <blockquote>LLM 的<strong>上下文</strong> = 它开这一次会时桌上摊开的<strong>全部文件</strong>。模型每次推理只能看桌上有的，看不到的不存在。</blockquote>
+  <p>对应三层概念：</p>
+  <ul>
+    <li><strong>上下文窗口</strong> = 桌子的<em>大小</em>（最多能摊下多少页）。</li>
+    <li><strong>Token</strong> = 文件的<em>字数/字符片</em>，是模型的最基本计量单位。</li>
+    <li><strong>有效上下文</strong> = 模型在这么大一张桌子上<em>真的还能稳定看清楚的区域</em>。这个区域往往比窗口小很多，而且在长任务中会越来越小。</li>
+  </ul>
+  <p>所以"百万上下文"听起来很厉害，但能不能"稳定记住"百万字级别的事，是另一回事。Anthropic 在《Effective context engineering for AI agents》里也提示：上下文"多"不等于"有用"，要做主动管理<sup><a href="#ref-1">[1]</a></sup>。</p>
+  <p>很多新手以为上下文 = 模型"记住了"。其实上下文 ≠ 记忆。"记忆"是要跨会话、跨重启保存的；而上下文是一次推理里的临时窗口——窗口结束（或者到下一轮），窗口里的字对模型就"看不见"了，除非重新塞进下一轮的 prompt。</p>
+
+  <h2>3. 核心机制或组成</h2>
+  <p>上下文本身不是一个孤立概念，它由多个机制支撑：</p>
+  <table>
+    <thead><tr><th>组成</th><th>作用</th><th>常见误解</th></tr></thead>
+    <tbody>
+      <tr><td>Tokenizer（分词器）</td><td>把自然语言切成 token</td><td>以为"字符数 = token 数"，其实中文一个字通常 1-2 个 token</td></tr>
+      <tr><td>Context Window（窗口）</td><td>单次推理可容纳的最大 token 数</td><td>以为窗口越大模型越聪明，其实是可用信息量更大</td></tr>
+      <tr><td>Attention（注意力）</td><td>决定 token 之间相互"看见"强度</td><td>以为所有 token 都被同等对待，其实位置靠后、稀疏的 token 容易被"忽略"</td></tr>
+      <tr><td>Instruction Hierarchy</td><td>系统提示 &gt; 用户提示 &gt; 工具结果</td><td>以为所有 prompt 是平等的，其实冲突时模型按层级取舍</td></tr>
+      <tr><td>Compaction / Editing</td><td>当上下文将满时主动压缩/清理</td><td>以为上下文满了必须"再开一轮"，其实可以原地压缩<sup><a href="#ref-4">[4]</a></sup></td></tr>
+    </tbody>
+  </table>
+
+  <p>用一张图把它和 Agent 的工作流挂上钩：</p>
+  <pre class="mermaid">
+flowchart TD
+  SP[System Prompt<br/>角色/约束/工具说明] --> C[Context Window<br/>本轮可读 token 池]
+  UH[User History<br/>用户历史消息] --> C
+  TR[Tool Results<br/>工具返回值] --> C
+  RAG[Retrieved Snippets<br/>检索片段] --> C
+  C -->|llm.generate| O[Response]
+  O --> C
+  C -- 接近上限 --> Comp{上下文管理}
+  Comp -- 压缩/摘要 --> C
+  Comp -- 写入外部 memory --> Mem[(外部存储)]
+  Mem -- 引用/检索 --> RAG
+  </pre>
+
+  <p>其中"上下文管理"是近年被独立提出来的工程方向<sup><a href="#ref-1">[1]</a></sup>，专门解决"模型有窗口，但任务不结束"的矛盾。常见策略包括：</p>
+  <ul>
+    <li><strong>Just-in-time 检索</strong>：不预先塞满上下文，让 Agent 在需要时主动查<sup><a href="#ref-1">[1]</a></sup>。</li>
+    <li><strong>Compaction</strong>：到上限附近自动摘要/剪枝，腾出空间<sup><a href="#ref-4">[4]</a></sup>。</li>
+    <li><strong>Memory Tool</strong>：把重要信息写到外部文件，需要时再读<sup><a href="#ref-4">[4]</a></sup>。</li>
+    <li><strong>分层指令（Instruction Hierarchy）</strong>：区分系统提示 vs 工具结果，避免用户/工具内容覆盖关键约束。</li>
+  </ul>
+
+  <h2>4. 一个具体应用场景</h2>
+  <p><strong>用户指令：</strong>"把项目仓库过去 30 天的所有 PR 总结成一份周报，列出风险 PR。"</p>
+
+  <p><strong>输入：</strong>30 天 PR 列表（粗筛 200 条，平均每条含 1k 字 = 200k 字 = 约 ~300k token）。</p>
+
+  <p><strong>处理：</strong></p>
+  <ol>
+    <li><strong>不要直接把 300k token 塞进上下文</strong>——大多数窗口塞不下，超出的会直接被截断。</li>
+    <li>第一阶段：用一个便宜的 LLM 调用，<strong>just-in-time 检索</strong>：遍历 PR，把每条 PR 摘要 + 风险标签写到本地索引（这本身就是一种"上下文工程"的输出）。</li>
+    <li>第二阶段：把"风险 PR 候选 + 简短说明"（约 5k-10k token）放进 LLM，让它总结周报。</li>
+    <li>第三阶段：模型回答后，把总结再写进 Memory，下次可以直接复用。</li>
+  </ol>
+
+  <p><strong>输出：</strong>一份精炼的周报（约 1k 字），原始数据保存在外部存储而不是上下文里。</p>
+  <p>这个例子的关键不是"窗口越大越好"，而是<strong>主动调度上下文</strong>：让窗口始终装得下"真正要被模型当下思考的事"，把"原材料"留在外部。这是 Anthropic 自家产品（Claude Code、Manged Agents）也在用的思路<sup><a href="#ref-1">[1][4]</a></sup>。</p>
+
+  <h2>5. 容易混淆的问题与使用边界</h2>
+  <table>
+    <thead><tr><th>易混点</th><th>本概念</th><th>相邻概念</th><th>判定方法</th></tr></thead>
+    <tbody>
+      <tr><td>上下文 vs 记忆</td><td>临时、本次推理可见</td><td>跨会话、跨重启持久</td><td>是否在会话结束后还能用</td></tr>
+      <tr><td>上下文窗口 vs 有效上下文</td><td>理论上能装下</td><td>模型真能稳定利用</td><td>看任务是否复杂 + 中段是否"丢信息"</td></tr>
+      <tr><td>长上下文 vs RAG</td><td>把一切都装进窗口</td><td>按需检索再喂给模型</td><td>看是否检索+按需加载<sup><a href="#ref-1">[1]</a></sup></td></tr>
+      <tr><td>Token vs 字符数</td><td>模型计量单位</td><td>人类字数</td><td>看分词器；中文 token ≠ 字符数</td></tr>
+    </tbody>
+  </table>
+
+  <h3>使用边界</h3>
+  <div class="callout">
+    <p><strong>上下文友好场景</strong>：单次对话、文档问答、一次性分析；同时希望"全在视野里"。</p>
+    <p><strong>必须做上下文管理的场景</strong>：Agent 多步任务、长代码库分析、跨数据集分析、对话轮数 &gt; 几十轮——否则容易"上下文腐烂 / 上下文污染"。</p>
+    <p><strong>常见上下文污染表现</strong>（个人判断 + 部分来自 Anthropic 博客<sup><a href="#ref-1">[1]</a></sup>）：</p>
+    <ul>
+      <li>模型开始<strong>引用自己没见过的工具结果</strong>。</li>
+      <li>被工具返回的<strong>错误信息带偏</strong>，越纠越错。</li>
+      <li>中段的细节<strong>被后来的内容覆盖</strong>（俗称"Lost in the middle"现象<sup><a href="#ref-3">[3]</a></sup>）。</li>
+      <li>用户的<strong>原始目标被工具噪声淹没</strong>，最后跑偏。</li>
+    </ul>
+  </div>
+
+  <h2>6. 自测问题</h2>
+  <ol>
+    <li>
+      <strong>Q：</strong>"100k 上下文窗口"是不是等于"能稳定利用 100k 的事实"？
+      <br/><strong>要点：</strong>不是。窗口是物理上限，模型在不同位置的注意力分布并不均匀——靠近开头和结尾的内容最稳，中段最容易"看不清"（Lost in the middle）。
+    </li>
+    <li>
+      <strong>Q：</strong>举出三种"上下文工程"的常见手段。
+      <br/><strong>要点：</strong>Just-in-time 检索（按需加载）/ Compaction（到顶时摘要压缩）/ Memory Tool（写到外部按需引用）/ Instruction Hierarchy（系统提示优先于工具结果）<sup><a href="#ref-1">[1]</a><a href="#ref-4">[4]</a></sup>。
+    </li>
+    <li>
+      <strong>Q：</strong>RAG 和"长上下文"是互斥吗？什么时候选哪个？
+      <br/><strong>要点：</strong>不互斥。RAG 适合"原材料巨大 + 每次只需要一段"；长上下文适合"任务需要模型同时看见多个事实"。两者可叠加使用<sup><a href="#ref-1">[1]</a></sup>。
+    </li>
+    <li>
+      <strong>Q：</strong>Agent 跑久了为什么会"迷失"，如何识别？
+      <br/><strong>要点：</strong>主因是上下文被工具结果/错误信息占据，原本的原始目标被稀释；可观察的现象包括：开始引用未见的输出、重复之前的失败、丢失最早的目标陈述。缓解办法是主动 compaction + 外部 memory 引用<sup><a href="#ref-4">[4]</a></sup>。
+    </li>
+  </ol>
+
+  <h2>7. 参考来源</h2>
+  <ol class="source">
+    <li id="ref-1"><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-agents">Anthropic Engineering: Effective context engineering for AI agents</a>。给出"上下文工程"作为独立工程领域的定义，区分 augmentation、compaction、agentic search 三种手段，提出 tools / examples / message history 各自的设计原则。</li>
+    <li id="ref-2"><a href="https://www.anthropic.com/news/context-management">Anthropic News: Managing context on the Claude Developer Platform</a>。介绍 context editing 与 memory tool 两个新能力，提到 Sonnet 4.5 的"上下文感知"和"在长时 Agent 任务中提升 39% 性能"的实测数据。</li>
+    <li id="ref-3"><a href="https://arxiv.org/abs/2307.03172">Liu et al. "Lost in the Middle", 2023 (arXiv 2307.03172)</a>。"Lost in the middle"现象的原始论文来源之一（"待核查"——本文以它为常见概念引用，建议读者打开论文确认精确表述）。</li>
+    <li id="ref-4"><a href="https://www.anthropic.com/news/context-management">Anthropic context editing &amp; memory tool 公告</a>。用于"context 不再能装下时"的工程手段，是当下"长跑 Agent"的标配能力。</li>
+    <li id="ref-5"><a href="https://www.workbuddy.cn/docs/workbuddy/Overview">WorkBuddy 简介</a>。本作业使用的 Agent 环境概述；WorkBuddy 的"自主规划执行 + 多步骤复杂任务"实际能力受其上下文工程策略约束。</li>
+  </ol>
+
+  <h2>8. 与其他概念的关联</h2>
+  <ul>
+    <li><strong>与"Agent"</strong>：Agent 的整个对话历史 + 工具结果都堆进 LLM 上下文，上下文是 Agent 当下的"视野"。上下文管理差，Agent 一定差；上下文管得好，Agent 能跑得很长<sup><a href="#ref-1">[1]</a><a href="#ref-2">[2]</a></sup>。</li>
+    <li><strong>与"Skill"</strong>：Skill 的内容会进入上下文。Skill 写得很冗长 = 直接占用窗口；写得很精炼 = 留下更多预算给真正的工作。</li>
+  </ul>
+
+  <hr />
+  <p class="meta">本文档遵循 concept-explainer Skill 的 7 小节模板生成；事实性引用经过 fetch 验证（截至 2026-09-04），"Lost in the middle" 一条标注"待核查"是因为原始论文作者/年份需在论文页面二次核对。所有"个人判断"标记的句子不作为事实断言。</p>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>if (window.mermaid) mermaid.initialize({ startOnLoad: true, securityLevel: 'loose' });</script>
+</body>
+</html>
