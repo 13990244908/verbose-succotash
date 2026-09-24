@@ -4,8 +4,8 @@
 
 | 编号 | 文件 | 主题 | 内容要点 |
 | --- | --- | --- | --- |
-| 01 | `01_variables.py` | 变量 | 命名规则、常见类型、动态类型、多变量赋值 |
-| 02 | `02_operators.py` | 运算符 | 算术、比较、赋值、逻辑、成员、身份、优先级 |
+| 01 | `01_variables.py` | 变量 | 命名规则、5 种基本类型（int/float/bool/str/None）、4 种容器类型（list/tuple/set/dict）、动态类型、多变量赋值 |
+| 02 | `02_operators.py` | 运算符 | 算术、取整（`//`·`int()`·`round()`）、取余 `%`、比较、赋值、逻辑、成员、身份、优先级 |
 | 03 | `03_expressions.py` | 表达式 | 类型转换、字符串格式化、输入输出、表达式组合 |
 | 04 | `04_control_flow.py` | 流程控制 | if/elif/else、for、while、break、continue、循环 else |
 | 05 | `05_functions.py` | 函数 | 定义与调用、参数、返回值、默认参数、*args、**kwargs、作用域 |
