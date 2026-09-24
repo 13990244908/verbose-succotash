@@ -1,0 +1,12 @@
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+
+# VS Code
+.vscode/
+
+# 虚拟环境
+.venv/
+venv/
+env/
