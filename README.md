@@ -15,6 +15,8 @@
 2. 用这个 Skill 学完作业要求的三个概念（Agent、大模型的上下文、Skill），输出三份结构化 HTML 资料。
 3. 说明三个概念之间的关系（Agent / 上下文 / Skill 的工作原理与相互影响）。
 4. 把整套内容公开到 GitHub，方便后续课程项目继续在这个仓库里加新资料、新 Skill。
+5. 存放**作业 02**（Python 基础 + 调用智谱 GLM 大模型 API）的 notebook 与说明，
+   与本次作业 01 放在同一个公开仓库里，方便老师一次查看。
 
 ---
 
@@ -34,11 +36,17 @@
 │   ├── llm-context.html                    # 大模型的上下文 学习资料
 │   ├── skill.html                          # Skill 学习资料
 │   └── concept-relationship.html           # 三者关系（流程图 + 表格 + 文字）
+├── llm-api-practice/                       # 作业 02：Python 基础 + 调用 GLM API
+│   ├── 02.ipynb                            # 作业主体（18 格，已带运行结果）
+│   ├── .env.example                        # API Key 配置模板（真实 .env 不提交）
+│   ├── requirements.txt                    # 依赖清单
+│   └── README.md                           # 作业 02 说明与常见问题
 ├── .gitignore                              # 排除敏感文件与临时文件
-└── README.md                               # 本文件
+└── README.md                               # 本文件（作业 01 + 作业 02 总说明）
 ```
 
-> 三份概念学习资料 + 概念关系说明 = 作业要求的全部学习产出。
+> 三份概念学习资料 + 概念关系说明 = 作业 01 的全部学习产出。
+> `llm-api-practice/` = 作业 02 的全部产出。
 
 ---
 
@@ -165,7 +173,56 @@ cd verbose-succotash
 
 ---
 
-## 8. License
+## 8. 作业 02：Python 基础 + 调用大模型 API
+
+放在 [`llm-api-practice/`](llm-api-practice/)，直接用 VS Code 打开
+[`llm-api-practice/02.ipynb`](llm-api-practice/02.ipynb) 即可查看。
+
+| 格子 | 内容 | 是否需要 API Key |
+|------|------|------------------|
+| 第 1 ~ 10 格 | Python 基础：变量、运算符、流程控制、函数、类、模块、异常处理 | 不需要 |
+| 第 11 格 | 从 `.env` 读取 API Key | 需要 |
+| 第 12 格 | 用 `ZhipuAiClient` 直接调用 GLM | 需要 |
+| 第 13 格 | 封装成 `zhipuAI(提示词, temperature=0.6)` | 需要 |
+| **第 14 格** | **作业任务：让 GLM 介绍「西北民族大学广告学专业」** | 需要 |
+
+**交付状态**：notebook 已在本地真实运行并保存输出，14 个代码格全部有输出，
+第 14 格可以看到 GLM 返回的完整专业介绍。
+
+**复现步骤**：
+
+```bash
+cd llm-api-practice
+cp .env.example .env          # 然后把自己的 Key 填进 .env
+pip install -r requirements.txt -i https://pypi.org/simple
+```
+
+> 注意：SDK 的**安装包名是 `zai-sdk`**（导入写作 `from zai import ZhipuAiClient`）；
+> 国内镜像源可能没有收录该包，需要加 `-i https://pypi.org/simple`。
+
+### 8.1 作业 02 的人工核查与修改
+
+- 老师课堂演示里的 `import 模块A` 是不存在的示意代码，本人改用 Python 标准库的 `math`
+  模块演示「模块与包」，保证格子能真实运行。
+- 未配置 API Key 时，本人把代码改成打印提示而非抛异常，避免作业因为环境问题整份跑不起来。
+- 第 5 格（函数定义）原本没有输出，本人补了一句调用与打印，保证「每格都有输出」。
+- 依赖包名踩坑：`pip install zai` 装到的是同名占位包，正确包名是 `zai-sdk`，已写进
+  `requirements.txt` 与 README。
+- 模型名：`glm-5.3` 为智谱当前旗舰模型；若账号无权限，可将第 12、13 格改为 `glm-4.6`。
+
+### 8.2 提交记录（git log）
+
+```
+896b8ee  运行 notebook 并保存输出：GLM-5.3 已成功调用   (llm-api-practice 分支)
+e2cf8a0  补充国内镜像源安装提示
+dd32331  实践作业02：Python 基础 + 调用智谱 GLM API
+5587095  修复失效来源链接：Anthropic context engineering 文章路径
+d6dcb3e  feat: 新增项目级 concept-explainer Skill 与三份概念学习资料
+```
+
+---
+
+## 9. License
 
 本仓库作为个人学习仓库使用，未声明开源许可证。
 如果你想 fork 或参考，欢迎；引用时希望保留原作者署名（GitHub: @13990244908）。
