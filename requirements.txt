@@ -1,0 +1,9 @@
+# 智谱 BigModel 官方 Python SDK
+# 注意：安装包名是 zai-sdk，导入时写作 `from zai import ZhipuAiClient`
+zai-sdk>=0.2.2
+
+# 用来从 .env 文件里读取 API Key
+python-dotenv>=1.0.0
+
+# 命令行运行 notebook 时需要（VS Code 一般自带）
+jupyter>=1.0.0

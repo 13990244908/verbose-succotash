@@ -1,0 +1,13 @@
+# 不要把 API Key 提交到仓库！
+.env
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# Jupyter 检查点
+.ipynb_checkpoints/
+
+# 虚拟环境
+.venv/
+venv/
