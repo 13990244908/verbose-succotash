@@ -48,6 +48,12 @@ ZHIPU_API_KEY=sk-xxxxxx这里换成你自己的
 pip install -r requirements.txt
 ```
 
+> 如果你的 pip 配了清华、阿里等**国内镜像源**，可能装不上这个包（镜像里还没有收录），加官方源即可：
+>
+> ```bash
+> pip install -r requirements.txt -i https://pypi.org/simple
+> ```
+
 > ⚠️ **最常见的坑**：老师代码里写的是 `from zai import ZhipuAiClient`，但**安装包名是 `zai-sdk`**。
 > 直接 `pip install zai` 装到的是另一个同名占位包，然后会报 `ModuleNotFoundError: No module named 'zai'`。
 > 正确写法是 `pip install zai-sdk`（`requirements.txt` 里已经写好了）。
